@@ -5,7 +5,7 @@
  * 
  * 
  * Published sept 2018
- * Author: Neil J
+ * Author: NJ
  */
 /*************************Headers***************************/
 #include <Time.h>

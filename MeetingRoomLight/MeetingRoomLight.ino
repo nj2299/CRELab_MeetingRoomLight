@@ -20,7 +20,7 @@
 #include <Adafruit_NeoPixel.h>  //Neopixel light control
 #include <WiFiConnect.h>
 /*************************Constants***************************/
-#define LED_COUNT 12
+#define LED_COUNT 36
 #define LED_PIN D2    //control pin from ESP
 #define TIMER_MS 5000
 #define MQTT_KEEPALIVE 120
@@ -31,9 +31,7 @@ const int mqttPort = 1883;
 const char* clientName = "";  //these three variables used for setting the client name to the Macaddress
 String topicString;
 char topicChar[18];
-//int transitions = 6;
-//int sides = 2;
-//int segment_size = LED_COUNT/(transitions*sides);//best if light strip is in increments of 12
+int segmultiplier = LED_COUNT/12;
 
 const char* topic_sub_roomupdate = "MRL/roomupdate";  //listen to this topic
 const char* topic_pub = "MRL/status";
@@ -70,6 +68,7 @@ unsigned long lastNTPResponse = millis();
 uint32_t timeUNIX = 0;
 uint32_t actualTime=0;
 uint32_t remainingUnix=0;
+uint32_t nextmeeting;
 int remaining=0;
 
 unsigned long prevActualTime = 0;
@@ -84,7 +83,7 @@ unsigned long prevActualTime = 0;
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 
 /****************setup wifi************************************/
@@ -253,29 +252,28 @@ void callback(char* topic, byte* payload, unsigned int length2){
   String ID = root["ID"];
   if(ID == "All" || ID == topicString){
     iscurrent = root["isCurrentMeeting"];
-    starttime = root["start"];
-    duration = root["duration"];
-    elapsed = root["elapsed"];
-    next = root["next"];
+    starttime = root["start"];    //start time in unix time
+    duration = root["duration"];    //duration in minutes
+    elapsed = root["elapsed"];    //minutes into meeting
+    next = root["next"];    //minutes to next meeting
     remaining = duration - elapsed;
+    nextmeeting = actualTime+(next*60);
     
-
-
+    
+    if (iscurrent != iscurrentprev){
+      iscurrentstatechng = 1;
+      iscurrentprev = iscurrent;
+    }
+  }
     Serial.println(iscurrent);
     Serial.println(starttime);
     Serial.println(duration);
     Serial.println(elapsed);
     Serial.println(next);
     Serial.println(actualTime);
+    Serial.println(nextmeeting);
     Serial.println(remaining);
-    //Serial.println(remainingUnix);
-
-    if (iscurrent != iscurrentprev){
-      iscurrentstatechng = 1;
-      iscurrentprev = iscurrent;
-    }
-  }
-
+    Serial.println(remainingUnix);
   
          
 }
@@ -305,17 +303,18 @@ void sendStartupMessage(){
    
     if (iscurrent==0 && iscurrentstatechng==1){
       LightOutMiddle (strip.Color(0, 255, 0));
+      //colorWipe(strip.Color(0,255,0),50);
       iscurrentstatechng = 0;
     }
 
-    if (iscurrent==1 && iscurrentstatechng==1){
+    if (iscurrent==1 && iscurrentstatechng==1||actualTime==nextmeeting){
       clear_strip();
       iscurrentstatechng = 0;
     }
 
     if (remainingUnix<=300 && remainingUnix > 240){
       if (effect == 1){
-        meeting_ending(strip.Color(255, 0, 0), effect);
+        meeting_ending(strip.Color(255, 0, 0), effect*segmultiplier);
         effect = effect+1;
         
       }
@@ -324,7 +323,7 @@ void sendStartupMessage(){
 
     if (remainingUnix<=240 && remainingUnix > 180){
       if (effect == 2){
-        meeting_ending(strip.Color(255, 0, 0), effect);
+        meeting_ending(strip.Color(255, 0, 0), effect*segmultiplier);
         effect = effect+1;
         
       }
@@ -332,7 +331,7 @@ void sendStartupMessage(){
 
     if (remainingUnix<=180 && remainingUnix > 120){
       if (effect == 3){
-        meeting_ending(strip.Color(255, 0, 0), effect);
+        meeting_ending(strip.Color(255, 0, 0), effect*segmultiplier);
         effect = effect+1;
         
       }
@@ -340,7 +339,7 @@ void sendStartupMessage(){
 
     if (remainingUnix<=120 && remainingUnix > 60){
       if (effect == 4){
-        meeting_ending(strip.Color(255, 0, 0), effect);
+        meeting_ending(strip.Color(255, 0, 0), effect*segmultiplier);
         effect = effect+1;
         
       }
@@ -348,7 +347,7 @@ void sendStartupMessage(){
 
     if (remainingUnix <= 60 && remainingUnix > 2){
       if (effect == 5){
-        meeting_ending(strip.Color(255, 0, 0), effect);
+        meeting_ending(strip.Color(255, 0, 0), effect*segmultiplier);
         effect = effect+1;
         if (remaining == next){
           transition_effect = 1;   //meeting
@@ -358,7 +357,7 @@ void sendStartupMessage(){
 
     if (remainingUnix <= 2){
       if (effect == 6){
-        meeting_ending(strip.Color(255, 0, 0), effect);
+        meeting_ending(strip.Color(255, 0, 0), effect*segmultiplier);
         effect = effect+1;
         if(transition_effect == 1){
           colorWipe(strip.Color(0,0,0),50); 
@@ -413,12 +412,15 @@ void LightOutMiddle(uint32_t c) {
   if(LED%2==0){                       //checks if LEDS are even or odd
     strip.setPixelColor(LED, c);
     strip.setPixelColor(LED2, c);
+    delay(1);
     strip.show();
     stall(4);
+    
   }
 
   else {
     strip.setPixelColor(LED, c);
+    delay(1);
     strip.show();
     stall(4);
   }
@@ -430,8 +432,8 @@ void LightOutMiddle(uint32_t c) {
     else{
       strip.setPixelColor(LED-i,c);
     }
-   
-    strip.show();
+   delay(1);
+   strip.show();
     stall(4);
     
     }

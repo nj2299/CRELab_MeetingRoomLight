@@ -125,8 +125,8 @@ void setup_wifi() {
 
 void updateFirmware(){
   
- // t_httpUpdate_return ret = ESPhttpUpdate.update("http://99.231.14.167/update");
-    t_httpUpdate_return ret = ESPhttpUpdate.update("http://nj2299.duckdns.org/UpdateMRL");
+  t_httpUpdate_return ret = ESPhttpUpdate.update("http://99.231.14.167/UpdateMRL");
+    //t_httpUpdate_return ret = ESPhttpUpdate.update("http://nj2299.duckdns.org/UpdateMRL");
 
       Serial.println(ret);
         switch(ret) {
@@ -252,7 +252,7 @@ void callback(char* topic, byte* payload, unsigned int length2){
 
   String ID = root["ID"];
   if(ID == "All" || ID == topicString){
-    iscurrent = root["isCurrentMeeting"];
+    iscurrent = root["isCurrent"];
     starttime = root["start"];
     duration = root["duration"];
     elapsed = root["elapsed"];

@@ -20,6 +20,7 @@
 //#include <Adafruit_NeoPixel.h>  //Neopixel light control
 #include <NeoPixelBus.h>    //Neopixel library that uses DMA (Direct Memory Access)
 #include <WiFiConnect.h>
+#include <Esp.h>
 /*************************Constants***************************/
 #define PixelCount 36
 //#define LED_PIN D2    //control pin from ESP
@@ -170,24 +171,8 @@ void ConnectBroker(PubSubClient client, const char* clientName)
 /*****************reconnect to MQTT Broker if it goes down**********************************/
 void reconnect() {
   // Loop until we're reconnected
-  delay(10);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-  long rssi = WiFi.RSSI();
-  Serial.print("RSSI:");
-  Serial.println(rssi);
-  
-  
-  
+  unsigned long currentMillis=0;
+  unsigned long startTimer = millis(); 
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect, just a name to identify the client
@@ -201,6 +186,11 @@ void reconnect() {
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
+      currentMillis = millis();
+      if ((currentMillis - startTimer) > 60000) {                                     //frozen for 1 minutes, restart
+      Serial.println("More than 1 minutes since last NTP response. Rebooting.");
+      Serial.flush();
+      ESP.restart();
     }
   }
 }
@@ -227,6 +217,7 @@ void send_status(){
     JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
     client.publish(topic_pub, JSONmessageBuffer);
     Serial.println(JSONmessageBuffer);
+    Serial.flush();
 }
 
 
@@ -274,6 +265,7 @@ void callback(char* topic, byte* payload, unsigned int length2){
     Serial.println(nextmeeting);
     Serial.println(remaining);
     Serial.println(remainingUnix);
+    Serial.flush();
   
          
 }

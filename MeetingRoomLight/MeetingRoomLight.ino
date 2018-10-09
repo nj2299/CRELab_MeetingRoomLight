@@ -52,6 +52,7 @@ unsigned long connect_time;
 //int Blue = 0;
 int transition_effect=0;   
 int effect=0;
+bool firmware = 0;
 
 
 WiFiClient espClient;         //wifi client
@@ -190,11 +191,11 @@ void reconnect() {
       if ((currentMillis - startTimer) > 60000) {                                     //frozen for 1 minutes, restart
       Serial.println("More than 1 minutes since last NTP response. Rebooting.");
       Serial.flush();
-      ESP.restart();
+      ESP.restart();        //restart chip if MQTT connection is lost for more than 1 minute - should reset WiFi etc
+        }
     }
   }
 }
-
 
 /************************setup lights***********************************/
 void setup_lights(){
@@ -219,6 +220,7 @@ void send_status(){
     Serial.println(JSONmessageBuffer);
     Serial.flush();
 }
+
 
 
 /*****************MQTT Listener******************************************************/
@@ -247,26 +249,32 @@ void callback(char* topic, byte* payload, unsigned int length2){
     duration = root["duration"];    //duration in minutes
     elapsed = root["elapsed"];    //minutes into meeting
     next = root["next"];    //minutes to next meeting
-    remaining = duration - elapsed;
+    firmware = root["firmware"];  //check for firmware update
+    remaining = duration - elapsed;   //in minutes
     nextmeeting = actualTime+(next*60);  //used for transitioning the light at the end of the meeting
-    
+    //    Serial.println(iscurrent);
+    //    Serial.println(starttime);
+    //    Serial.println(duration);
+    //    Serial.println(elapsed);
+    //    Serial.println(next);
+    //    Serial.println(actualTime);
+    //    Serial.println(nextmeeting);
+    //    Serial.println(remaining);
+    //    Serial.println(remainingUnix);
+    //    Serial.flush();
     
     if (iscurrent != iscurrentprev){
       iscurrentstatechng = 1;
       iscurrentprev = iscurrent;
     }
+
+    if (firmware == 1){
+      firmware = 0;
+      updateFirmware();
+      
+    }
   }
-    Serial.println(iscurrent);
-    Serial.println(starttime);
-    Serial.println(duration);
-    Serial.println(elapsed);
-    Serial.println(next);
-    Serial.println(actualTime);
-    Serial.println(nextmeeting);
-    Serial.println(remaining);
-    Serial.println(remainingUnix);
-    Serial.flush();
-  
+
          
 }
 
@@ -290,16 +298,21 @@ void sendStartupMessage(){
 }
 
 
-/***************Effect Control*****************************************************/
+/***************Effect Control*****************************************************
+ * 
+ * 
+ * sets the timing for the various lighting effects
+ */
+
   void effect_control (){
    
-    if (iscurrent==0 && iscurrentstatechng==1){
+    if (iscurrent==0 && iscurrentstatechng==1){       //turn on light -> no meeting at the moment
       LightOutMiddle (green);
       //colorWipe(strip.Color(0,255,0),50);
       iscurrentstatechng = 0;
     }
 
-    if (iscurrent==1 && iscurrentstatechng==1||actualTime==nextmeeting){
+    if (iscurrent==1 && iscurrentstatechng==1){    //turn off light -> meeting active
       //clear_strip();
       LightOutMiddle (black);
       iscurrentstatechng = 0;
@@ -338,27 +351,33 @@ void sendStartupMessage(){
       }
     }
 
-    if (remainingUnix <= 60 && remainingUnix > 2){
+    if (remainingUnix <= 60 && remainingUnix > 30){
       if (effect == 5){
         meeting_ending(red, effect*segmultiplier);
         effect = effect+1;
-        if (remaining == next){
+        if (remaining == next){     //if remaining minutes == minutes to next meeting
           transition_effect = 1;   //meeting occurs directly after
         }
       }
     }
 
-    if (remainingUnix <= 2){
+    if (remainingUnix <= 30){
       if (effect == 6){
         meeting_ending(red, effect*segmultiplier);
         effect = effect+1;
-        if(transition_effect == 1){
-          delay(5000);
+      }
+    }
+
+    if (remainingUnix <= 0){      //transition effect
+      if (effect == 7){
+        if(transition_effect == 1){     //meeting occurs directly after
           LightOutMiddle(black); 
         }
         else{
-          LightOutMiddle (green);
+          LightOutMiddle (green);       //meeting happens later
         }
+        effect = 0;                 //effect = 0 is basically do nothing
+        
        }
     }
   }

@@ -5,6 +5,7 @@
  * 
  * 
  * Published sept 2018
+ * Last update: Oct 9, 2018
  * Author: NJ
  */
 /*************************Headers***************************/
@@ -244,7 +245,7 @@ void callback(char* topic, byte* payload, unsigned int length2){
 
   String ID = root["ID"];
   if(ID == "All" || ID == topicString){
-    iscurrent = root["isCurrent"];
+    iscurrent = root["isCurrent"];    //0 no meeting, 1 meeting occuring
     starttime = root["start"];    //start time in unix time
     duration = root["duration"];    //duration in minutes
     elapsed = root["elapsed"];    //minutes into meeting
@@ -263,7 +264,7 @@ void callback(char* topic, byte* payload, unsigned int length2){
     //    Serial.println(remainingUnix);
     //    Serial.flush();
     
-    if (iscurrent != iscurrentprev){
+    if (iscurrent != iscurrentprev){        //used to track when there is a change of meeting room state
       iscurrentstatechng = 1;
       iscurrentprev = iscurrent;
     }
@@ -302,6 +303,7 @@ void sendStartupMessage(){
  * 
  * 
  * sets the timing for the various lighting effects
+ * the effect variable is used to ensure the function runs once, and is reset after full animation has been run.
  */
 
   void effect_control (){
@@ -310,17 +312,19 @@ void sendStartupMessage(){
       LightOutMiddle (green);
       //colorWipe(strip.Color(0,255,0),50);
       iscurrentstatechng = 0;
+      effect = 0;
     }
-
-    if (iscurrent==1 && iscurrentstatechng==1){    //turn off light -> meeting active
+//turn off light -> meeting active
+    if (iscurrent==1 && iscurrentstatechng == 1 || actualTime > nextmeeting && effect == 0){    //second part of || update from fusion every 3 minutes -> leads to missed transitions.  effect ensures it runonce
       //clear_strip();
       LightOutMiddle (black);
       iscurrentstatechng = 0;
+      effect = 1;
     }
 
     if (remainingUnix<=300 && remainingUnix > 240){
       if (effect == 1){
-        meeting_ending(red, effect*segmultiplier);
+        meeting_ending(red, effect*segmultiplier);      //segment multiplier is to get the right number of LED's to light up(6 effects ->36 lights, 6 lights per effect)
         effect = effect+1;
         
       }
@@ -580,9 +584,9 @@ void loop() {
       if(remainingUnix <=0){
         remainingUnix =0;           
       }
-      if( remainingUnix >300){
-      effect = 1;
-    }
+      //if( remainingUnix >300){
+      //effect = 1;
+      //}
     effect_control();
   }
 }

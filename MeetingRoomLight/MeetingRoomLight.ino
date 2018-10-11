@@ -34,7 +34,7 @@ const int mqttPort = 1883;
 const char* clientName = "";  //these three variables used for setting the client name to the Macaddress
 String topicString;
 char topicChar[18];
-int segmultiplier = PixelCount/12;
+int segmultiplier = PixelCount/12;  // dividing by 12 gives the number of pixels on each side to illuminate - based on 6 animations
 
 const char* topic_sub_roomupdate = "MRL/roomupdate";  //listen to this topic
 const char* topic_pub = "MRL/status";
@@ -315,50 +315,53 @@ void sendStartupMessage(){
       effect = 0;
     }
 //turn off light -> meeting active
-    if (iscurrent==1 && iscurrentstatechng == 1 || actualTime > nextmeeting && effect == 0){    //second part of || update from fusion every 3 minutes -> leads to missed transitions.  effect ensures it runonce
-      //clear_strip();
-      LightOutMiddle (black);
-      iscurrentstatechng = 0;
-      effect = 1;
+    if (iscurrent==1 && iscurrentstatechng == 1 || actualTime > nextmeeting){    //second part of || update from fusion every 3 minutes -> leads to missed transitions.  effect ensures it runonce
+        if(effect == 0){
+          //clear_strip();
+          LightOutMiddle (black);
+          iscurrentstatechng = 0;
+          effect = 1;
+        }
+
     }
 
     if (remainingUnix<=300 && remainingUnix > 240){
-      if (effect == 1){
+      if (effect == 1 || effect == 0){
         meeting_ending(red, effect*segmultiplier);      //segment multiplier is to get the right number of LED's to light up(6 effects ->36 lights, 6 lights per effect)
-        effect = effect+1;
+        effect = 2;
         
       }
     }
 
 
     if (remainingUnix<=240 && remainingUnix > 180){
-      if (effect == 2){
+      if (effect == 2 || effect == 0){
         meeting_ending(red, effect*segmultiplier);
-        effect = effect+1;
+        effect = 3;
         
       }
     }
 
     if (remainingUnix<=180 && remainingUnix > 120){
-      if (effect == 3){
+      if (effect == 3 || effect == 0){
         meeting_ending(red, effect*segmultiplier);
-        effect = effect+1;
+        effect = 4;
         
       }
     }
 
     if (remainingUnix<=120 && remainingUnix > 60){
-      if (effect == 4){
+      if (effect == 4 || effect == 0){
         meeting_ending(red, effect*segmultiplier);
-        effect = effect+1;
+        effect = 5;
         
       }
     }
 
     if (remainingUnix <= 60 && remainingUnix > 30){
-      if (effect == 5){
+      if (effect == 5 || effect == 0){
         meeting_ending(red, effect*segmultiplier);
-        effect = effect+1;
+        effect = 6;
         if (remaining == next){     //if remaining minutes == minutes to next meeting
           transition_effect = 1;   //meeting occurs directly after
         }
@@ -366,9 +369,9 @@ void sendStartupMessage(){
     }
 
     if (remainingUnix <= 30){
-      if (effect == 6){
+      if (effect == 6 || effect == 0){
         meeting_ending(red, effect*segmultiplier);
-        effect = effect+1;
+        effect = 7;
       }
     }
 

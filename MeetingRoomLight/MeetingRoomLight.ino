@@ -127,12 +127,10 @@ void setup_wifi() {
 
 void updateFirmware(){
   
-<<<<<<< HEAD
+
   t_httpUpdate_return ret = ESPhttpUpdate.update("http://99.231.14.167/UpdateMRL");
-=======
-  t_httpUpdate_return ret = ESPhttpUpdate.update("http://99.231.14.167/MRLupdate");
->>>>>>> Watchdog
-    //t_httpUpdate_return ret = ESPhttpUpdate.update("http://nj2299.duckdns.org/UpdateMRL");
+
+  //t_httpUpdate_return ret = ESPhttpUpdate.update("http://nj2299.duckdns.org/UpdateMRL");
 
       Serial.println(ret);
         switch(ret) {
@@ -249,14 +247,14 @@ void callback(char* topic, byte* payload, unsigned int length2){
 
   String ID = root["ID"];
   if(ID == "All" || ID == topicString){
-<<<<<<< HEAD
+
     iscurrent = root["isCurrent"];
     starttime = root["start"];
     duration = root["duration"];
     elapsed = root["elapsed"];
     next = root["next"];
     remaining = duration - elapsed;
-=======
+
     iscurrent = root["isCurrent"];    //0 no meeting, 1 meeting occuring
     starttime = root["start"];    //start time in unix time
     duration = root["duration"];    //duration in minutes
@@ -275,7 +273,7 @@ void callback(char* topic, byte* payload, unsigned int length2){
     //    Serial.println(remaining);
     //    Serial.println(remainingUnix);
     //    Serial.flush();
->>>>>>> Watchdog
+
     
     if (iscurrent != iscurrentprev){        //used to track when there is a change of meeting room state
       iscurrentstatechng = 1;

@@ -370,6 +370,7 @@ void sendStartupMessage(){
       if (effect == 5 || effect == 1){
         meeting_ending(red, effect*segmultiplier);
         effect = 6;
+        transition_effect = 0;       //reset transition effect
         if (remaining == next){     //if remaining minutes == minutes to next meeting
           transition_effect = 1;   //meeting occurs directly after
         }

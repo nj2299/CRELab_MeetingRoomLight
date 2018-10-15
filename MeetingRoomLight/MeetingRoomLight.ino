@@ -336,40 +336,40 @@ void sendStartupMessage(){
     if (remainingUnix<=300 && remainingUnix > 240){
       if (effect == 1){
         meeting_ending(red, effect*segmultiplier);      //segment multiplier is to get the right number of LED's to light up(6 effects ->36 lights, 6 lights per effect)
-        effect = effect+1;
+        effect = 2;
         
       }
     }
 
 
     if (remainingUnix<=240 && remainingUnix > 180){
-      if (effect == 2){
+      if (effect == 2 || effect == 1){
         meeting_ending(red, effect*segmultiplier);
-        effect = effect+1;
+        effect = 3;
         
       }
     }
 
     if (remainingUnix<=180 && remainingUnix > 120){
-      if (effect == 3){
+      if (effect == 3 || effect == 1){
         meeting_ending(red, effect*segmultiplier);
-        effect = effect+1;
+        effect = 4;
         
       }
     }
 
     if (remainingUnix<=120 && remainingUnix > 60){
-      if (effect == 4){
+      if (effect == 4 || effect == 1){
         meeting_ending(red, effect*segmultiplier);
-        effect = effect+1;
+        effect = 5;
         
       }
     }
 
     if (remainingUnix <= 60 && remainingUnix > 30){
-      if (effect == 5){
+      if (effect == 5 || effect == 1){
         meeting_ending(red, effect*segmultiplier);
-        effect = effect+1;
+        effect = 6;
         if (remaining == next){     //if remaining minutes == minutes to next meeting
           transition_effect = 1;   //meeting occurs directly after
         }
@@ -377,21 +377,23 @@ void sendStartupMessage(){
     }
 
     if (remainingUnix <= 30){
-      if (effect == 6){
+      if (effect == 6 || effect == 1){
         meeting_ending(red, effect*segmultiplier);
-        effect = effect+1;
+        effect = 7;
       }
     }
 
     if (remainingUnix <= 0){      //transition effect
-      if (effect == 7){
+      if (effect == 7 || effect == 1){
         if(transition_effect == 1){     //meeting occurs directly after
           LightOutMiddle(black); 
+          effect = 1;
         }
         else{
           LightOutMiddle (green);       //meeting happens later
+          effect = 0; 
         }
-        effect = 0;                 //effect = 0 is basically do nothing
+                        //effect = 0 is basically do nothing
         
        }
     }

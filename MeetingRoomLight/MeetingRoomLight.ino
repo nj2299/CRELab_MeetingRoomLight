@@ -40,7 +40,7 @@ const char* topic_sub_roomupdate = "MRL/roomupdate";  //listen to this topic
 const char* topic_pub = "MRL/status";
 const char* topic_sub_firmware = "MRL/commands/firmware";  //listen for firmware update
 time_t currenttime = 0;    //used for getting linux time
-bool iscurrent = 0;           //is there a current meeting
+bool iscurrent = 1;           //is there a current meeting
 bool iscurrentprev = 0;     //previous status current state
 bool iscurrentstatechng = 1;
 uint32_t starttime =0;                //start time of meeting - linux time
@@ -72,7 +72,7 @@ unsigned long lastNTPResponse = millis();
 uint32_t timeUNIX = 0;
 uint32_t actualTime=0;
 uint32_t remainingUnix=0;
-uint32_t nextmeeting;
+uint32_t nextmeeting=0;
 int remaining=0;
 
 unsigned long prevActualTime = 0;
@@ -331,11 +331,9 @@ void sendStartupMessage(){
     
 //turn off light -> meeting active
     if ((iscurrent==1 && iscurrentstatechng == 1) || (actualTime > nextmeeting)){    //second part of || update from fusion every 3 minutes -> leads to missed transitions.  effect ensures it runonce
-      if (effect == 0){
         LightOutMiddle (black);
         iscurrentstatechng = 0;
         effect = 1;
-      }
     }
 
     if (remainingUnix<=300 && remainingUnix > 240){

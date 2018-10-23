@@ -261,8 +261,12 @@ void callback(char* topic, byte* payload, unsigned int length2){
     elapsed = root["elapsed"];    //minutes into meeting
     next = root["next"];    //minutes to next meeting
     firmware = root["firmware"];  //check for firmware update
+    nextmeeting = root["nextmtg"]; //check for next meeting start
     remaining = duration - elapsed;   //in minutes
-    nextmeeting = actualTime+(next*60);  //used for transitioning the light at the end of the meeting
+   
+   
+   // nextmeeting = actualTime+(next*60);  //used for transitioning the light at the end of the meeting
+
     //    Serial.println(iscurrent);
     //    Serial.println(starttime);
     //    Serial.println(duration);

@@ -321,16 +321,17 @@ void sendStartupMessage(){
    
     if (iscurrent==0 && iscurrentstatechng==1){       //turn on light -> no meeting at the moment
       LightOutMiddle (green);
-      //colorWipe(strip.Color(0,255,0),50);
       iscurrentstatechng = 0;
       effect = 0;
     }
+    
 //turn off light -> meeting active
     if ((iscurrent==1 && iscurrentstatechng == 1) || (actualTime > nextmeeting)){    //second part of || update from fusion every 3 minutes -> leads to missed transitions.  effect ensures it runonce
-      //clear_strip();
-      LightOutMiddle (black);
-      iscurrentstatechng = 0;
-      effect = 1;
+      if (effect == 0){
+        LightOutMiddle (black);
+        iscurrentstatechng = 0;
+        effect = 1;
+      }
     }
 
     if (remainingUnix<=300 && remainingUnix > 240){

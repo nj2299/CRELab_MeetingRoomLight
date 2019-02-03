@@ -2,7 +2,7 @@
  * 
  * 
  * Meeting Room Indicator Light - changes colour based on status of the room recieved from Fusion
- * 
+ * refactored to use start and end time only
  * 
  * Published sept 2018
  * Last update: Oct 15, 2018
@@ -30,6 +30,7 @@
 #define MQTT_MAX_PACKET_SIZE 512
 
 /*************************global Variables***************************/
+const char* mqttServer = "192.168.1.13";
 const int mqttPort = 1883;
 const char* clientName = "";  //these three variables used for setting the client name to the Macaddress
 String topicString;
@@ -40,13 +41,10 @@ const char* topic_sub_roomupdate = "MRL/roomupdate";  //listen to this topic
 const char* topic_pub = "MRL/status";
 const char* topic_sub_firmware = "MRL/commands/firmware";  //listen for firmware update
 time_t currenttime = 0;    //used for getting linux time
-bool iscurrent = 1;           //is there a current meeting
+bool iscurrent = 0;           //is there a current meeting
 bool iscurrentprev = 0;     //previous status current state
 bool iscurrentstatechng = 1;
-uint32_t starttime =0;                //start time of meeting - linux time
-int duration = 0;                 //duration of meeting(minutes)
-int elapsed = 0;                  //time elapsed (minutes)
-int next = 0;                     //minutes to next meeting
+
 unsigned long connect_time;
 //int Red = 0;
 //int Green = 0;
@@ -54,6 +52,7 @@ unsigned long connect_time;
 int transition_effect=0;   
 int effect=0;
 bool firmware = 0;
+int lightStatus = 0;
 
 
 WiFiClient espClient;         //wifi client
@@ -71,9 +70,13 @@ unsigned long prevNTP = 0;
 unsigned long lastNTPResponse = millis();
 uint32_t timeUNIX = 0;
 uint32_t actualTime=0;
-uint32_t remainingUnix=0;
-uint32_t nextmeeting=0;
+long remainingUnix=0;
+uint32_t nextmeeting;
 int remaining=0;
+uint32_t starttime = 1549073939;                //start time of meeting - linux time
+int duration = 0;                 //duration of meeting(minutes)
+int elapsed = 0;                  //time elapsed (minutes)
+int next = 0;                     //minutes to next meeting
 
 unsigned long prevActualTime = 0;
 
@@ -128,9 +131,9 @@ void setup_wifi() {
 void updateFirmware(){
   
 
-  t_httpUpdate_return ret = ESPhttpUpdate.update("http://99.231.14.167/UpdateMRL");
+  //t_httpUpdate_return ret = ESPhttpUpdate.update("http://99.231.14.167/UpdateMRL");
 
-  //t_httpUpdate_return ret = ESPhttpUpdate.update("http://nj2299.duckdns.org/UpdateMRL");
+  t_httpUpdate_return ret = ESPhttpUpdate.update("http://nj2299.duckdns.org/UpdateMRL");
 
       Serial.println(ret);
         switch(ret) {
@@ -191,10 +194,10 @@ void reconnect() {
       // Wait 5 seconds before retrying
       delay(5000);
       currentMillis = millis();
-      if ((currentMillis - startTimer) > 60000) {                                     //frozen for 1 minutes, restart
-      Serial.println("More than 1 minutes since last NTP response. Rebooting.");
+      if ((currentMillis - startTimer) > 30000) {                                     //frozen for 5 minutes, restart
+      Serial.println("More than 5 minutes since last NTP response. Rebooting.");
       Serial.flush();
-      ESP.restart();        //restart chip if MQTT connection is lost for more than 1 minute - should reset WiFi etc
+      ESP.restart();        //restart chip if MQTT connection is lost for more than 5 minutes - should reset WiFi etc
         }
     }
   }
@@ -261,12 +264,8 @@ void callback(char* topic, byte* payload, unsigned int length2){
     elapsed = root["elapsed"];    //minutes into meeting
     next = root["next"];    //minutes to next meeting
     firmware = root["firmware"];  //check for firmware update
-    nextmeeting = root["nextmtg"]; //check for next meeting start
     remaining = duration - elapsed;   //in minutes
-   
-   
-   // nextmeeting = actualTime+(next*60);  //used for transitioning the light at the end of the meeting
-
+    nextmeeting = actualTime+(next*60);  //used for transitioning the light at the end of the meeting
     //    Serial.println(iscurrent);
     //    Serial.println(starttime);
     //    Serial.println(duration);
@@ -278,11 +277,12 @@ void callback(char* topic, byte* payload, unsigned int length2){
     //    Serial.println(remainingUnix);
     //    Serial.flush();
 
-    
+/*    
     if (iscurrent != iscurrentprev){        //used to track when there is a change of meeting room state
       iscurrentstatechng = 1;
       iscurrentprev = iscurrent;
     }
+*/
 
     if (firmware == 1){
       firmware = 0;
@@ -323,87 +323,96 @@ void sendStartupMessage(){
 
   void effect_control (){
    
-    if (iscurrent==0 && iscurrentstatechng==1){       //turn on light -> no meeting at the moment
-      LightOutMiddle (green);
-      iscurrentstatechng = 0;
-      effect = 0;
+ //Room is available
+    if (iscurrent==0 && lightStatus != 1){       //turn on light -> no meeting at the moment
+      LightOutMiddle (green);                   //lightStatus used to control if effect has already run
+      lightStatus = 1;
+      Serial.println("No Meeting");
+    Serial.println (iscurrent);
+    Serial.println(remainingUnix);
+    
+    //    Serial.println(iscurrent);
+    //    Serial.println(starttime);
+    //    Serial.println(duration);
+    //    Serial.println(elapsed);
+    //    Serial.println(next);
+    //    Serial.println(actualTime);
+    //    Serial.println(nextmeeting);
+    //    Serial.println(remaining);
+    //    Serial.println(remainingUnix);
     }
     
-//turn off light -> meeting active
-    if ((iscurrent==1 && iscurrentstatechng == 1) || (actualTime > nextmeeting)){    //second part of || update from fusion every 3 minutes -> leads to missed transitions.  effect ensures it runonce
+//Meeting effect control
+    if (iscurrent==1 || (actualTime > nextmeeting)){    //second part of || update from fusion every 3 minutes -> leads to missed transitions.  
+
+      if(remainingUnix > 300 && lightStatus != 2){
         LightOutMiddle (black);
-        iscurrentstatechng = 0;
-        effect = 1;
-    }
+        lightStatus = 2;
+             Serial.println("Meeting");
+    Serial.println (iscurrent);
+    Serial.println(remainingUnix);
+    Serial.println(transition_effect);
+       }
 
-    if (remainingUnix<=300 && remainingUnix > 240){
-      if (effect == 1){
-        meeting_ending(red, effect*segmultiplier);      //segment multiplier is to get the right number of LED's to light up(6 effects ->36 lights, 6 lights per effect)
+      if (remainingUnix <=300 && remainingUnix >240 && lightStatus !=3){
+        effect = 1;                                   //effect controls the segments that light up on the LED strip
+        meeting_ending(red, effect*segmultiplier);
+        lightStatus = 3;
+      }
+
+      if (remainingUnix <=240 && remainingUnix > 180 && lightStatus !=4){
         effect = 2;
-        
-      }
-    }
-
-
-    if (remainingUnix<=240 && remainingUnix > 180){
-      if (effect == 2 || effect == 1){
         meeting_ending(red, effect*segmultiplier);
+        lightStatus = 4;
+      }
+
+      if (remainingUnix <= 180 && remainingUnix > 120 && lightStatus !=5){
         effect = 3;
-        
-      }
-    }
-
-    if (remainingUnix<=180 && remainingUnix > 120){
-      if (effect == 3 || effect == 1){
         meeting_ending(red, effect*segmultiplier);
+        lightStatus = 5;
+      }
+
+      if (remainingUnix<=120 && remainingUnix > 60 && lightStatus !=6){
         effect = 4;
-        
-      }
-    }
-
-    if (remainingUnix<=120 && remainingUnix > 60){
-      if (effect == 4 || effect == 1){
         meeting_ending(red, effect*segmultiplier);
+        lightStatus = 6;     
+      }
+
+
+      if (remainingUnix<=60 && remainingUnix > 30 && lightStatus !=7){
         effect = 5;
-        
-      }
-    }
-
-    if (remainingUnix <= 60 && remainingUnix > 30){
-      if (effect == 5 || effect == 1){
         meeting_ending(red, effect*segmultiplier);
-        effect = 6;
+        lightStatus = 7;
         transition_effect = 0;       //reset transition effect
         if (remaining == next){     //if remaining minutes == minutes to next meeting
-          transition_effect = 1;   //meeting occurs directly after
+          transition_effect = 1;   //meeting occurs directly after     
         }
       }
-    }
 
-    if (remainingUnix <= 30){
-      if (effect == 6 || effect == 1){
+      if (remainingUnix <=30 && remainingUnix !=0 && lightStatus != 8){
+        effect = 6;
         meeting_ending(red, effect*segmultiplier);
-        effect = 7;
+        lightStatus = 8;
       }
-    }
 
-    if (remainingUnix <= 0){      //transition effect
-      if (effect == 7 || effect == 1){
-        if(transition_effect == 1){     //meeting occurs directly after
-          LightOutMiddle(black); 
-          effect = 1;
+      if(remainingUnix <=0 && lightStatus != 9){
+        if(transition_effect ==1){    //meeting occurs direcly after
+          LightOutMiddle(black);
+           Serial.println ("Transision 1");
         }
         else{
-          LightOutMiddle (green);       //meeting happens later
-          effect = 0; 
-        }
-                        //effect = 0 is basically do nothing
-        
-       }
+          LightOutMiddle (green);    //room is available
+          Serial.println ("Transision 2");
+          }
+        lightStatus = 9;
+      }
+      
     }
   }
 
-/************************Time Functions***********************************/
+    
+    
+/***********************Time Functions***********************************/
 void startUDP() {
   Serial.println("Starting UDP");
   UDP.begin(123);                          // Start listening for UDP messages on port 123

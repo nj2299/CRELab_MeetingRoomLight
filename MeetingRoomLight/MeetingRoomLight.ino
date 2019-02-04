@@ -26,7 +26,7 @@
 #define PixelCount 36
 //#define LED_PIN D2    //control pin from ESP
 #define TIMER_MS 5000
-#define MQTT_KEEPALIVE 130
+#define MQTT_KEEPALIVE 120
 #define MQTT_MAX_PACKET_SIZE 512
 
 /*************************global Variables***************************/

@@ -71,7 +71,7 @@ unsigned long prevNTP = 0;
 unsigned long lastNTPResponse = millis();
 uint32_t timeUNIX = 0;
 uint32_t actualTime=0;
-long remainingUnix=0;
+uint32_t remainingUnix=0;
 uint32_t nextmeeting=0;
 int remaining=0;
 

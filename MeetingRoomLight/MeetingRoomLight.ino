@@ -263,9 +263,10 @@ void callback(char* topic, byte* payload, unsigned int length2){
     duration = root["duration"];    //duration in minutes
     elapsed = root["elapsed"];    //minutes into meeting
     next = root["next"];    //minutes to next meeting
+    nextmeeting = root["nextmtg"]; //next meeting unix time
     firmware = root["firmware"];  //check for firmware update
     remaining = duration - elapsed;   //in minutes
-    nextmeeting = actualTime+(next*60);  //used for transitioning the light at the end of the meeting
+    //    nextmeeting = actualTime+(next*60);  //used for transitioning the light at the end of the meeting
     //    Serial.println(iscurrent);
     //    Serial.println(starttime);
     //    Serial.println(duration);
@@ -355,24 +356,28 @@ void sendStartupMessage(){
        }
 
       if (remainingUnix <=300 && remainingUnix >240 && lightStatus !=3){
+        Serial.println("5 minutes remaining");
         effect = 1;                                   //effect controls the segments that light up on the LED strip
         meeting_ending(red, effect*segmultiplier);
         lightStatus = 3;
       }
 
       if (remainingUnix <=240 && remainingUnix > 180 && lightStatus !=4){
+        Serial.println("4 minutes remaining");
         effect = 2;
         meeting_ending(red, effect*segmultiplier);
         lightStatus = 4;
       }
 
       if (remainingUnix <= 180 && remainingUnix > 120 && lightStatus !=5){
+        Serial.println("3 minutes remaining");
         effect = 3;
         meeting_ending(red, effect*segmultiplier);
         lightStatus = 5;
       }
 
       if (remainingUnix<=120 && remainingUnix > 60 && lightStatus !=6){
+        Serial.println("2 minutes remaining");
         effect = 4;
         meeting_ending(red, effect*segmultiplier);
         lightStatus = 6;     
@@ -380,29 +385,32 @@ void sendStartupMessage(){
 
 
       if (remainingUnix<=60 && remainingUnix > 30 && lightStatus !=7){
+        Serial.println("1 minutes remaining");
         effect = 5;
         meeting_ending(red, effect*segmultiplier);
         lightStatus = 7;
         transition_effect = 0;       //reset transition effect
-        if (remaining == next){     //if remaining minutes == minutes to next meeting
+        if (nextmeeting - actualTime <= 60){     //if remaining minutes == minutes to next meeting
           transition_effect = 1;   //meeting occurs directly after     
         }
       }
 
       if (remainingUnix <=30 && remainingUnix !=0 && lightStatus != 8){
+        Serial.println("30 seconds remaining");
         effect = 6;
         meeting_ending(red, effect*segmultiplier);
         lightStatus = 8;
       }
 
       if(remainingUnix <=0 && lightStatus != 9){
+        Serial.println("Time up");
         if(transition_effect ==1){    //meeting occurs direcly after
           LightOutMiddle(black);
-           Serial.println ("Transision 1");
+           Serial.println ("Transition 1 - meeting directly afty");
         }
         else{
           LightOutMiddle (green);    //room is available
-          Serial.println ("Transision 2");
+          Serial.println ("Transition 2 - no meeting directly after");
           }
         lightStatus = 9;
       }
@@ -559,7 +567,7 @@ void setup() {
   if(!WiFi.hostByName(NTPServerName, timeServerIP)) { // Get the IP address of the NTP server
     Serial.println("DNS lookup failed. Rebooting.");
     Serial.flush();
-    ESP.resart();
+    ESP.restart();
   }
   Serial.print("Time server IP:\t");
   Serial.println(timeServerIP);
@@ -597,10 +605,12 @@ void loop() {
     Serial.print("NTP response:\t");
     Serial.println(timeUNIX);
     lastNTPResponse = currentMillis;
-  } else if ((currentMillis - lastNTPResponse) > 3600000) {
-    Serial.println("More than 1 hour since last NTP response. Rebooting.");
+  } 
+  
+  if ((currentMillis - lastNTPResponse) > 600000) {
+    Serial.println("More than 10 min since last NTP response. Rebooting.");
     Serial.flush();
-    ESP.reset();
+    ESP.restart();
   }
 
   actualTime = timeUNIX + (currentMillis - lastNTPResponse)/1000;

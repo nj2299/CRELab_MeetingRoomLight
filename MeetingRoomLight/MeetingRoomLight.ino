@@ -559,7 +559,7 @@ void setup() {
   if(!WiFi.hostByName(NTPServerName, timeServerIP)) { // Get the IP address of the NTP server
     Serial.println("DNS lookup failed. Rebooting.");
     Serial.flush();
-    ESP.reset();
+    ESP.resart();
   }
   Serial.print("Time server IP:\t");
   Serial.println(timeServerIP);
